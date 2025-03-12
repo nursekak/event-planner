@@ -1,6 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import './App.css';
+import SignUp from './SignUp.jsx';
+import SignIn from './SignIn.jsx';
+import Profile from './Profile.jsx';
 
 export default function App() {
   const [events, setEvents] = useState(() => {
@@ -9,11 +11,163 @@ export default function App() {
   });
   const [currentView, setCurrentView] = useState('events');
   const [currentEvent, setCurrentEvent] = useState(null);
-  
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authView, setAuthView] = useState('signIn');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [error, setError] = useState('');
+
   // Save events to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('events', JSON.stringify(events));
   }, [events]);
+
+  const handleSignUp = (email, password, name, phone) => {
+    try {
+      // Получаем существующих пользователей
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      
+      // Проверяем, существует ли пользователь с таким email
+      if (savedUsers.some(user => user.email === email)) {
+        setError('Пользователь с таким email уже существует');
+        return;
+      }
+
+      // Создаем нового пользователя
+      const newUser = {
+        email,
+        password,
+        name,
+        phone,
+        id: Date.now()
+      };
+
+      // Добавляем пользователя в список и сохраняем в localStorage
+      savedUsers.push(newUser);
+      localStorage.setItem('users', JSON.stringify(savedUsers));
+
+      // Устанавливаем текущего пользователя
+      setCurrentUser(newUser);
+      setIsAuthenticated(true);
+      setCurrentView('events');
+      setError('');
+
+      // Сохраняем данные текущего пользователя
+      localStorage.setItem('currentUserId', newUser.id);
+      localStorage.setItem('userName', name);
+      localStorage.setItem('userPhone', phone);
+    } catch (err) {
+      setError('Ошибка при регистрации. Попробуйте позже.');
+    }
+  };
+
+  const handleSignIn = (email, password) => {
+    try {
+      // Получаем список пользователей
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = savedUsers.find(u => u.email === email && u.password === password);
+
+      if (!user) {
+        setError('Неверный email или пароль');
+        return;
+      }
+
+      // Устанавливаем текущего пользователя
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      setCurrentView('events');
+      setError('');
+
+      // Сохраняем данные текущего пользователя
+      localStorage.setItem('currentUserId', user.id);
+      localStorage.setItem('userName', user.name);
+      localStorage.setItem('userPhone', user.phone);
+    } catch (err) {
+      setError('Ошибка при входе. Попробуйте позже.');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setCurrentView('events');
+    localStorage.removeItem('currentUserId');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userPhone');
+    localStorage.removeItem('userPhoto');
+  };
+
+  const handleUpdateProfile = (updatedProfile) => {
+    try {
+      // Получаем список пользователей
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const userIndex = savedUsers.findIndex(u => u.id === currentUser.id);
+
+      if (userIndex === -1) {
+        throw new Error('Пользователь не найден');
+      }
+
+      // Обновляем данные пользователя
+      const updatedUser = {
+        ...savedUsers[userIndex],
+        name: updatedProfile.name,
+        email: updatedProfile.email,
+        phone: updatedProfile.phone
+      };
+
+      // Если есть новый пароль, обновляем его
+      if (updatedProfile.newPassword) {
+        if (savedUsers[userIndex].password !== updatedProfile.oldPassword) {
+          throw new Error('Неверный текущий пароль');
+        }
+        updatedUser.password = updatedProfile.newPassword;
+      }
+
+      // Обновляем пользователя в списке
+      savedUsers[userIndex] = updatedUser;
+      localStorage.setItem('users', JSON.stringify(savedUsers));
+
+      // Обновляем текущего пользователя
+      setCurrentUser(updatedUser);
+      localStorage.setItem('userName', updatedUser.name);
+      localStorage.setItem('userPhone', updatedUser.phone);
+
+      // Показываем уведомление об успешном обновлении
+      alert('Профиль успешно обновлен!');
+    } catch (err) {
+      alert(err.message || 'Ошибка при обновлении профиля');
+    }
+  };
+
+  // Проверяем авторизацию при загрузке
+  useEffect(() => {
+    const currentUserId = localStorage.getItem('currentUserId');
+    if (currentUserId) {
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = savedUsers.find(u => u.id === parseInt(currentUserId));
+      if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      }
+    }
+  }, []);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="app">
+        <header>
+          <h1>Планировщик мероприятий</h1>
+        </header>
+        <main>
+          {error && <div className="error-message">{error}</div>}
+          {authView === 'signUp' ? (
+            <SignUp onSignUp={handleSignUp} onSwitchToSignIn={() => setAuthView('signIn')} />
+          ) : (
+            <SignIn onSignIn={handleSignIn} onSwitchToSignUp={() => setAuthView('signUp')} />
+          )}
+        </main>
+      </div>
+    );
+  }
 
   // Create a new event
   const createEvent = (newEvent) => {
@@ -82,7 +236,7 @@ export default function App() {
       if (event.id === eventId) {
         return {
           ...event,
-          tasks: event.tasks.map(task => 
+          tasks: event.tasks.map(task =>
             task.id === taskId ? { ...task, completed: !task.completed } : task
           )
         };
@@ -270,25 +424,27 @@ export default function App() {
         alert('Пожалуйста, заполните название и дату мероприятия');
         return;
       }
-      
+
       // Обновляем событие в общем массиве
-      setEvents(events.map(event => 
-        event.id === currentEvent.id ? { ...event, 
+      setEvents(events.map(event =>
+        event.id === currentEvent.id ? {
+          ...event,
           title: editedEvent.title,
           date: editedEvent.date,
           location: editedEvent.location,
           budget: parseFloat(editedEvent.budget) || 0
         } : event
       ));
-      
+
       // Обновляем текущее событие
-      setCurrentEvent({ ...currentEvent, 
+      setCurrentEvent({
+        ...currentEvent,
         title: editedEvent.title,
         date: editedEvent.date,
         location: editedEvent.location,
         budget: parseFloat(editedEvent.budget) || 0
       });
-      
+
       setIsEditing(false);
     };
 
@@ -302,8 +458,8 @@ export default function App() {
         <div className="event-header">
           <h2>{currentEvent.title}</h2>
           <div>
-            <button 
-              onClick={() => setIsEditing(!isEditing)} 
+            <button
+              onClick={() => setIsEditing(!isEditing)}
               className="edit-btn"
             >
               {isEditing ? 'Отменить' : 'Редактировать'}
@@ -366,26 +522,26 @@ export default function App() {
         )}
 
         <div className="tabs">
-          <button 
-            className={activeTab === 'info' ? 'active' : ''} 
+          <button
+            className={activeTab === 'info' ? 'active' : ''}
             onClick={() => setActiveTab('info')}
           >
             Информация
           </button>
-          <button 
-            className={activeTab === 'guests' ? 'active' : ''} 
+          <button
+            className={activeTab === 'guests' ? 'active' : ''}
             onClick={() => setActiveTab('guests')}
           >
             Гости ({currentEvent.guests.length})
           </button>
-          <button 
-            className={activeTab === 'tasks' ? 'active' : ''} 
+          <button
+            className={activeTab === 'tasks' ? 'active' : ''}
             onClick={() => setActiveTab('tasks')}
           >
             Задачи ({currentEvent.tasks.length})
           </button>
-          <button 
-            className={activeTab === 'budget' ? 'active' : ''} 
+          <button
+            className={activeTab === 'budget' ? 'active' : ''}
             onClick={() => setActiveTab('budget')}
           >
             Бюджет
@@ -406,8 +562,8 @@ export default function App() {
                 ></textarea>
               ) : (
                 <div className="info-display">
-                  {additionalInfo ? 
-                    <div className="additional-info-text">{additionalInfo}</div> : 
+                  {additionalInfo ?
+                    <div className="additional-info-text">{additionalInfo}</div> :
                     <p className="no-info">Нет дополнительной информации</p>
                   }
                 </div>
@@ -436,7 +592,7 @@ export default function App() {
                   <button type="submit">Добавить гостя</button>
                 </form>
               )}
-              
+
               {currentEvent.guests.length === 0 ? (
                 <p>Пока нет гостей</p>
               ) : (
@@ -566,9 +722,9 @@ export default function App() {
   // Notifications component
   const Notifications = () => {
     const upcomingEvents = getUpcomingEvents();
-    
+
     if (upcomingEvents.length === 0) return null;
-    
+
     return (
       <div className="notifications">
         <h3>Уведомления</h3>
@@ -591,16 +747,29 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Планировщик мероприятий</h1>
+        <div className="header-actions">
+          <button onClick={() => setCurrentView('profile')} className="profile-btn">
+            {currentUser?.name || 'Профиль'}
+          </button>
+          <button onClick={handleLogout}>Выйти</button>
+        </div>
       </header>
-      
+
       <main>
         <Notifications />
-        
+
         {currentView === 'events' && <EventsListView />}
         {currentView === 'createEvent' && <CreateEventView />}
         {currentView === 'eventDetails' && <EventDetailsView />}
+        {currentView === 'profile' && (
+          <Profile 
+            onBack={() => setCurrentView('events')}
+            userEmail={currentUser?.email}
+            onUpdateProfile={handleUpdateProfile}
+          />
+        )}
       </main>
-      
+
       <footer>
         <p>© 2023 Планировщик мероприятий</p>
       </footer>
