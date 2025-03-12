@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import SignUp from './SignUp.jsx';
 import SignIn from './SignIn.jsx';
+import Profile from './Profile.jsx';
 
 export default function App() {
   const [events, setEvents] = useState(() => {
@@ -11,26 +12,144 @@ export default function App() {
   const [currentView, setCurrentView] = useState('events');
   const [currentEvent, setCurrentEvent] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authView, setAuthView] = useState('signIn'); // 'signIn' или 'signUp'
+  const [authView, setAuthView] = useState('signIn');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [error, setError] = useState('');
 
   // Save events to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('events', JSON.stringify(events));
   }, [events]);
 
-  const handleSignUp = (email, password) => {
-    // Здесь можно добавить логику регистрации, например, через API
-    console.log('Регистрация:', email, password);
-    setIsAuthenticated(true);
-    setCurrentView('events');
+  const handleSignUp = (email, password, name, phone) => {
+    try {
+      // Получаем существующих пользователей
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      
+      // Проверяем, существует ли пользователь с таким email
+      if (savedUsers.some(user => user.email === email)) {
+        setError('Пользователь с таким email уже существует');
+        return;
+      }
+
+      // Создаем нового пользователя
+      const newUser = {
+        email,
+        password,
+        name,
+        phone,
+        id: Date.now()
+      };
+
+      // Добавляем пользователя в список и сохраняем в localStorage
+      savedUsers.push(newUser);
+      localStorage.setItem('users', JSON.stringify(savedUsers));
+
+      // Устанавливаем текущего пользователя
+      setCurrentUser(newUser);
+      setIsAuthenticated(true);
+      setCurrentView('events');
+      setError('');
+
+      // Сохраняем данные текущего пользователя
+      localStorage.setItem('currentUserId', newUser.id);
+      localStorage.setItem('userName', name);
+      localStorage.setItem('userPhone', phone);
+    } catch (err) {
+      setError('Ошибка при регистрации. Попробуйте позже.');
+    }
   };
 
   const handleSignIn = (email, password) => {
-    // Здесь можно добавить логику входа, например, через API,
-    console.log('Вход:', email, password);
-    setIsAuthenticated(true);
-    setCurrentView('events');
+    try {
+      // Получаем список пользователей
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = savedUsers.find(u => u.email === email && u.password === password);
+
+      if (!user) {
+        setError('Неверный email или пароль');
+        return;
+      }
+
+      // Устанавливаем текущего пользователя
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      setCurrentView('events');
+      setError('');
+
+      // Сохраняем данные текущего пользователя
+      localStorage.setItem('currentUserId', user.id);
+      localStorage.setItem('userName', user.name);
+      localStorage.setItem('userPhone', user.phone);
+    } catch (err) {
+      setError('Ошибка при входе. Попробуйте позже.');
+    }
   };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setCurrentView('events');
+    localStorage.removeItem('currentUserId');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userPhone');
+    localStorage.removeItem('userPhoto');
+  };
+
+  const handleUpdateProfile = (updatedProfile) => {
+    try {
+      // Получаем список пользователей
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const userIndex = savedUsers.findIndex(u => u.id === currentUser.id);
+
+      if (userIndex === -1) {
+        throw new Error('Пользователь не найден');
+      }
+
+      // Обновляем данные пользователя
+      const updatedUser = {
+        ...savedUsers[userIndex],
+        name: updatedProfile.name,
+        email: updatedProfile.email,
+        phone: updatedProfile.phone
+      };
+
+      // Если есть новый пароль, обновляем его
+      if (updatedProfile.newPassword) {
+        if (savedUsers[userIndex].password !== updatedProfile.oldPassword) {
+          throw new Error('Неверный текущий пароль');
+        }
+        updatedUser.password = updatedProfile.newPassword;
+      }
+
+      // Обновляем пользователя в списке
+      savedUsers[userIndex] = updatedUser;
+      localStorage.setItem('users', JSON.stringify(savedUsers));
+
+      // Обновляем текущего пользователя
+      setCurrentUser(updatedUser);
+      localStorage.setItem('userName', updatedUser.name);
+      localStorage.setItem('userPhone', updatedUser.phone);
+
+      // Показываем уведомление об успешном обновлении
+      alert('Профиль успешно обновлен!');
+    } catch (err) {
+      alert(err.message || 'Ошибка при обновлении профиля');
+    }
+  };
+
+  // Проверяем авторизацию при загрузке
+  useEffect(() => {
+    const currentUserId = localStorage.getItem('currentUserId');
+    if (currentUserId) {
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = savedUsers.find(u => u.id === parseInt(currentUserId));
+      if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      }
+    }
+  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -39,6 +158,7 @@ export default function App() {
           <h1>Планировщик мероприятий</h1>
         </header>
         <main>
+          {error && <div className="error-message">{error}</div>}
           {authView === 'signUp' ? (
             <SignUp onSignUp={handleSignUp} onSwitchToSignIn={() => setAuthView('signIn')} />
           ) : (
@@ -627,7 +747,12 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Планировщик мероприятий</h1>
-        <button onClick={() => setIsAuthenticated(false)}>Выйти</button>
+        <div className="header-actions">
+          <button onClick={() => setCurrentView('profile')} className="profile-btn">
+            {currentUser?.name || 'Профиль'}
+          </button>
+          <button onClick={handleLogout}>Выйти</button>
+        </div>
       </header>
 
       <main>
@@ -636,6 +761,13 @@ export default function App() {
         {currentView === 'events' && <EventsListView />}
         {currentView === 'createEvent' && <CreateEventView />}
         {currentView === 'eventDetails' && <EventDetailsView />}
+        {currentView === 'profile' && (
+          <Profile 
+            onBack={() => setCurrentView('events')}
+            userEmail={currentUser?.email}
+            onUpdateProfile={handleUpdateProfile}
+          />
+        )}
       </main>
 
       <footer>
