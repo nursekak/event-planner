@@ -1,6 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import './App.css';
+import SignUp from './SignUp.jsx';
+import SignIn from './SignIn.jsx';
 
 export default function App() {
   const [events, setEvents] = useState(() => {
@@ -9,11 +10,44 @@ export default function App() {
   });
   const [currentView, setCurrentView] = useState('events');
   const [currentEvent, setCurrentEvent] = useState(null);
-  
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authView, setAuthView] = useState('signIn'); // 'signIn' или 'signUp'
+
   // Save events to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('events', JSON.stringify(events));
   }, [events]);
+
+  const handleSignUp = (email, password) => {
+    // Здесь можно добавить логику регистрации, например, через API
+    console.log('Регистрация:', email, password);
+    setIsAuthenticated(true);
+    setCurrentView('events');
+  };
+
+  const handleSignIn = (email, password) => {
+    // Здесь можно добавить логику входа, например, через API,
+    console.log('Вход:', email, password);
+    setIsAuthenticated(true);
+    setCurrentView('events');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="app">
+        <header>
+          <h1>Планировщик мероприятий</h1>
+        </header>
+        <main>
+          {authView === 'signUp' ? (
+            <SignUp onSignUp={handleSignUp} onSwitchToSignIn={() => setAuthView('signIn')} />
+          ) : (
+            <SignIn onSignIn={handleSignIn} onSwitchToSignUp={() => setAuthView('signUp')} />
+          )}
+        </main>
+      </div>
+    );
+  }
 
   // Create a new event
   const createEvent = (newEvent) => {
@@ -82,7 +116,7 @@ export default function App() {
       if (event.id === eventId) {
         return {
           ...event,
-          tasks: event.tasks.map(task => 
+          tasks: event.tasks.map(task =>
             task.id === taskId ? { ...task, completed: !task.completed } : task
           )
         };
@@ -270,25 +304,27 @@ export default function App() {
         alert('Пожалуйста, заполните название и дату мероприятия');
         return;
       }
-      
+
       // Обновляем событие в общем массиве
-      setEvents(events.map(event => 
-        event.id === currentEvent.id ? { ...event, 
+      setEvents(events.map(event =>
+        event.id === currentEvent.id ? {
+          ...event,
           title: editedEvent.title,
           date: editedEvent.date,
           location: editedEvent.location,
           budget: parseFloat(editedEvent.budget) || 0
         } : event
       ));
-      
+
       // Обновляем текущее событие
-      setCurrentEvent({ ...currentEvent, 
+      setCurrentEvent({
+        ...currentEvent,
         title: editedEvent.title,
         date: editedEvent.date,
         location: editedEvent.location,
         budget: parseFloat(editedEvent.budget) || 0
       });
-      
+
       setIsEditing(false);
     };
 
@@ -302,8 +338,8 @@ export default function App() {
         <div className="event-header">
           <h2>{currentEvent.title}</h2>
           <div>
-            <button 
-              onClick={() => setIsEditing(!isEditing)} 
+            <button
+              onClick={() => setIsEditing(!isEditing)}
               className="edit-btn"
             >
               {isEditing ? 'Отменить' : 'Редактировать'}
@@ -366,26 +402,26 @@ export default function App() {
         )}
 
         <div className="tabs">
-          <button 
-            className={activeTab === 'info' ? 'active' : ''} 
+          <button
+            className={activeTab === 'info' ? 'active' : ''}
             onClick={() => setActiveTab('info')}
           >
             Информация
           </button>
-          <button 
-            className={activeTab === 'guests' ? 'active' : ''} 
+          <button
+            className={activeTab === 'guests' ? 'active' : ''}
             onClick={() => setActiveTab('guests')}
           >
             Гости ({currentEvent.guests.length})
           </button>
-          <button 
-            className={activeTab === 'tasks' ? 'active' : ''} 
+          <button
+            className={activeTab === 'tasks' ? 'active' : ''}
             onClick={() => setActiveTab('tasks')}
           >
             Задачи ({currentEvent.tasks.length})
           </button>
-          <button 
-            className={activeTab === 'budget' ? 'active' : ''} 
+          <button
+            className={activeTab === 'budget' ? 'active' : ''}
             onClick={() => setActiveTab('budget')}
           >
             Бюджет
@@ -406,8 +442,8 @@ export default function App() {
                 ></textarea>
               ) : (
                 <div className="info-display">
-                  {additionalInfo ? 
-                    <div className="additional-info-text">{additionalInfo}</div> : 
+                  {additionalInfo ?
+                    <div className="additional-info-text">{additionalInfo}</div> :
                     <p className="no-info">Нет дополнительной информации</p>
                   }
                 </div>
@@ -436,7 +472,7 @@ export default function App() {
                   <button type="submit">Добавить гостя</button>
                 </form>
               )}
-              
+
               {currentEvent.guests.length === 0 ? (
                 <p>Пока нет гостей</p>
               ) : (
@@ -566,9 +602,9 @@ export default function App() {
   // Notifications component
   const Notifications = () => {
     const upcomingEvents = getUpcomingEvents();
-    
+
     if (upcomingEvents.length === 0) return null;
-    
+
     return (
       <div className="notifications">
         <h3>Уведомления</h3>
@@ -591,16 +627,17 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Планировщик мероприятий</h1>
+        <button onClick={() => setIsAuthenticated(false)}>Выйти</button>
       </header>
-      
+
       <main>
         <Notifications />
-        
+
         {currentView === 'events' && <EventsListView />}
         {currentView === 'createEvent' && <CreateEventView />}
         {currentView === 'eventDetails' && <EventDetailsView />}
       </main>
-      
+
       <footer>
         <p>© 2023 Планировщик мероприятий</p>
       </footer>
