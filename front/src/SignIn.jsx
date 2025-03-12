@@ -1,24 +1,72 @@
 import { useState } from 'react';
 
 export default function SignIn({ onSignIn, onSwitchToSignUp }) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
+    const [error, setError] = useState('');
+
+    const validateEmail = (email) => {
+        return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSignIn(email, password);
+        setError('');
+
+        // Валидация email
+        if (!validateEmail(formData.email)) {
+            setError('Введите корректный email');
+            return;
+        }
+
+        // Проверка минимальной длины пароля
+        if (formData.password.length < 6) {
+            setError('Пароль должен содержать минимум 6 символов');
+            return;
+        }
+
+        // Получаем сохраненные данные пользователя
+        const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+        const user = savedUsers.find(u => u.email === formData.email);
+
+        if (!user) {
+            setError('Пользователь с таким email не найден');
+            return;
+        }
+
+        if (user.password !== formData.password) {
+            setError('Неверный пароль');
+            return;
+        }
+
+        // Если все проверки пройдены, вызываем функцию входа
+        onSignIn(formData.email, formData.password);
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        setError('');
     };
 
     return (
         <div className="auth-form">
             <h2>Вход</h2>
+            {error && <div className="error-message">{error}</div>}
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label>Email:</label>
                     <input
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="example@mail.com"
                         required
                     />
                 </div>
@@ -26,9 +74,12 @@ export default function SignIn({ onSignIn, onSwitchToSignUp }) {
                     <label>Пароль:</label>
                     <input
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="Минимум 6 символов"
                         required
+                        minLength="6"
                     />
                 </div>
                 <button type="submit">Войти</button>
