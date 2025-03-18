@@ -6,6 +6,8 @@ import Profile from './Profile.jsx';
 import CreateEvent from './CreateEvent.jsx';
 import EditEvent from './EditEvent.jsx';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
+import ProfileMenu from './components/ProfileMenu';
+import Settings from './components/Settings';
 
 export default function App() {
   const [events, setEvents] = useState(() => {
@@ -120,9 +122,24 @@ export default function App() {
     setDeleteModal({ isOpen: false, eventId: null, eventTitle: '' });
   };
 
+  const handleSettingsClick = () => {
+    setCurrentView('settings');
+  };
+
+  const handleBackFromSettings = () => {
+    setCurrentView('events');
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="container">
+        <div className="animated-background">
+          <div className="shape"></div>
+          <div className="shape"></div>
+          <div className="shape"></div>
+          <div className="shape"></div>
+          <div className="shape"></div>
+        </div>
         <header>
           <h1>Планировщик мероприятий</h1>
         </header>
@@ -145,6 +162,13 @@ export default function App() {
 
   return (
     <div className="container">
+      <div className="animated-background">
+        <div className="shape"></div>
+        <div className="shape"></div>
+        <div className="shape"></div>
+        <div className="shape"></div>
+        <div className="shape"></div>
+      </div>
       <header>
         <h1 
           onClick={() => setCurrentView('events')}
@@ -154,23 +178,13 @@ export default function App() {
         </h1>
         <div className="header-actions">
           {currentView !== 'profile' && (
-            <button 
-              className="profile-btn"
-              onClick={() => setCurrentView('profile')}
-            >
-              {currentUser?.photo && (
-                <img 
-                  src={currentUser.photo} 
-                  alt="Avatar" 
-                  className="profile-btn-avatar"
-                />
-              )}
-              {currentUser?.name || 'Профиль'}
-            </button>
+            <ProfileMenu
+              currentUser={currentUser}
+              onProfileClick={() => setCurrentView('profile')}
+              onSignOut={handleSignOut}
+              onSettingsClick={handleSettingsClick}
+            />
           )}
-          <button onClick={handleSignOut} className="btn-outline">
-            Выйти
-          </button>
         </div>
       </header>
 
@@ -204,6 +218,8 @@ export default function App() {
               setCurrentEvent(null);
             }}
           />
+        ) : currentView === 'settings' ? (
+          <Settings onBack={handleBackFromSettings} />
         ) : (
           <div className="events-container">
             {error && <div className="error-message">{error}</div>}
