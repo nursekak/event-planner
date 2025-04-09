@@ -381,14 +381,15 @@ header h1 {
 
 .event-actions {
   display: flex;
-  gap: 12px;
-  flex-wrap: nowrap;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.event-actions button {
+.event-actions button,
+.event-actions a {
   min-width: auto;
-  padding: 8px 20px;
-  font-size: 0.9rem;
+  padding: 8px 12px;
+  font-size: 0.85rem;
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--card-background);
@@ -397,6 +398,7 @@ header h1 {
   white-space: nowrap;
   font-weight: 500;
   backdrop-filter: blur(8px);
+  margin-bottom: 4px;
 }
 
 .event-actions .btn-outline {
@@ -2082,20 +2084,53 @@ input:checked + .slider:before {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--card-background);
+  background: var(--body-background);
+  border-left: 1px solid var(--border-color);
 }
 
 .messages-container {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .message {
   max-width: 70%;
   padding: 12px 16px;
-  margin-bottom: 16px;
-  border-radius: 12px;
+  margin-bottom: 12px;
+  border-radius: 18px;
+  word-wrap: break-word;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+
+.message.sent {
+  background: var(--primary-gradient);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+}
+
+.message.received {
+  background: var(--card-background);
+  color: var(--text-color);
+  align-self: flex-start;
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: 6px;
+}
+
+.message-meta {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 4px;
+  text-align: right;
+}
+
+.message.received .message-meta {
+  color: rgba(255, 255, 255, 0.7);
+  text-align: left;
 }
 
 .message-input {
@@ -2104,16 +2139,47 @@ input:checked + .slider:before {
   display: flex;
   gap: 12px;
   align-items: center;
+  background: var(--card-background);
 }
 
 .message-input input {
   flex: 1;
   padding: 12px 16px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 20px;
   background: var(--input-background);
   color: var(--text-color);
   font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+.message-input input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.send-button {
+  padding: 10px 16px;
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.send-button:hover {
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .no-conversation {
@@ -2182,11 +2248,17 @@ input:checked + .slider:before {
 }
 
 .user-item:hover {
-  background: var(--hover-background);
+  background-color: var(--hover-background);
 }
 
 .user-item.selected {
-  background: var(--primary-color-light);
+  background-color: var(--primary-color);
+  color: white;
+  border-left: 4px solid var(--primary-dark);
+}
+
+.user-item.selected .user-email {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .user-avatar {
@@ -2216,4 +2288,42 @@ input:checked + .slider:before {
 .user-email {
   font-size: 0.875rem;
   color: var(--text-light);
+}
+
+/* Стили для фильтров даты */
+.event-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-left: auto; /* Отодвигаем фильтры вправо */
+  padding-right: 20px;
+}
+
+.event-filters label {
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.event-filters input[type="date"] {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--input-background);
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+.clear-filters-btn {
+  margin-left: 10px;
+}
+
+.event-actions .calendar-btn {
+  background-color: #34a853; /* Цвет Google Calendar */
+  border-color: #34a853;
+  color: white;
+}
+
+.event-actions .calendar-btn:hover {
+  background-color: #2c8e45;
+  border-color: #2c8e45;
 }

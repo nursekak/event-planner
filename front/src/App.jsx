@@ -24,6 +24,9 @@ export default function App() {
   const [error, setError] = useState('');
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, eventId: null, eventTitle: '' });
   const [isChatOpen, setIsChatOpen] = useState(false);
+  // Состояния для фильтров даты
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
 
   // Add mouse tracking and ripple effect for buttons
   useEffect(() => {
@@ -140,6 +143,34 @@ export default function App() {
     setCurrentView('events');
   };
 
+  // Новый обработчик для кнопки "Мои мероприятия"
+  const handleMyEventsClick = () => {
+    // Здесь можно будет добавить фильтрацию, если потребуется
+    // Пока просто переключаем вид на основной список
+    setCurrentView('events'); 
+    setIsOpen(false); // Закрываем меню профиля, если оно открыто
+  };
+
+  // Функция для генерации ссылки на Google Calendar
+  const generateGoogleCalendarLink = (event) => {
+    const baseUrl = 'https://www.google.com/calendar/render?action=TEMPLATE';
+    const eventDate = new Date(event.date);
+    // Форматируем дату и время в формат YYYYMMDDTHHMMSSZ
+    const startTime = eventDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    // Для простоты сделаем событие длительностью 1 час
+    const endTimeDate = new Date(eventDate.getTime() + 60 * 60 * 1000);
+    const endTime = endTimeDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    const params = new URLSearchParams({
+      text: event.title || 'Название события',
+      dates: `${startTime}/${endTime}`,
+      details: event.description || '',
+      location: event.location || ''
+    });
+
+    return `${baseUrl}&${params.toString()}`;
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="container">
@@ -192,8 +223,9 @@ export default function App() {
               currentUser={currentUser}
               onProfileClick={() => setCurrentView('profile')}
               onSignOut={handleSignOut}
-              onSettingsClick={handleSettingsClick}
-              onChatClick={handleChatClick}
+              onSettingsClick={() => setCurrentView('settings')}
+              onChatClick={() => setIsChatOpen(true)}
+              onMyEventsClick={handleMyEventsClick}
             />
           )}
         </div>
@@ -237,6 +269,26 @@ export default function App() {
             
             <div className="events-header">
               <h2>Мои события</h2>
+              <div className="event-filters">
+                 <label htmlFor="startDate">С:</label>
+                 <input 
+                   type="date" 
+                   id="startDate" 
+                   value={startDateFilter}
+                   onChange={(e) => setStartDateFilter(e.target.value)}
+                 />
+                 <label htmlFor="endDate">По:</label>
+                 <input 
+                   type="date" 
+                   id="endDate" 
+                   value={endDateFilter}
+                   onChange={(e) => setEndDateFilter(e.target.value)}
+                   min={startDateFilter} // Конечная дата не может быть раньше начальной
+                 />
+                 <button onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }} className="btn-outline btn-sm clear-filters-btn">
+                    Очистить даты
+                 </button>
+              </div>
               <button 
                 className="create-btn"
                 onClick={() => {
@@ -254,7 +306,15 @@ export default function App() {
               </div>
             ) : (
               <div className="events-grid">
-                {events.map(event => (
+                {events
+                  .filter(event => { // Добавляем фильтрацию перед map
+                    if (!startDateFilter && !endDateFilter) return true; // Нет фильтров - показываем все
+                    const eventDate = new Date(event.date).setHours(0,0,0,0); // Убираем время для сравнения
+                    const start = startDateFilter ? new Date(startDateFilter).getTime() : 0;
+                    const end = endDateFilter ? new Date(endDateFilter).getTime() : Infinity;
+                    return eventDate >= start && eventDate <= end;
+                  })
+                  .map(event => (
                   <div key={event.id} className="event-card">
                     <h3>{event.title}</h3>
                     <p>{event.description}</p>
@@ -270,6 +330,15 @@ export default function App() {
                         >
                           Редактировать
                         </button>
+                        {/* Кнопка Добавить в календарь */}
+                        <a 
+                           href={generateGoogleCalendarLink(event)} 
+                           target="_blank" 
+                           rel="noopener noreferrer" 
+                           className="btn-secondary btn-sm calendar-btn"
+                        >
+                           В календарь
+                        </a>
                         <button
                           className="btn-danger btn-sm"
                           onClick={() => handleDeleteEvent(event)}

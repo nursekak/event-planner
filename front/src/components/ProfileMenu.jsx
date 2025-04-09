@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-const ProfileMenu = ({ currentUser, onProfileClick, onSignOut, onSettingsClick, onChatClick }) => {
+const ProfileMenu = ({ currentUser, onProfileClick, onSignOut, onSettingsClick, onChatClick, onMyEventsClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const menuRef = useRef(null);
@@ -85,6 +85,23 @@ const ProfileMenu = ({ currentUser, onProfileClick, onSignOut, onSettingsClick, 
               <path d="M8 8C10.21 8 12 6.21 12 4C12 1.79 10.21 0 8 0C5.79 0 4 1.79 4 4C4 6.21 5.79 8 8 8ZM8 10C5.33 10 0 11.34 0 14V16H16V14C16 11.34 10.67 10 8 10Z" fill="currentColor"/>
             </svg>
             <span>Мой профиль</span>
+          </button>
+          
+          <button onClick={() => {
+            onMyEventsClick();
+            setIsOpen(false);
+          }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M13.3337 2.66667H2.66699C1.93061 2.66667 1.33366 3.26362 1.33366 4V13.3333C1.33366 14.0697 1.93061 14.6667 2.66699 14.6667H13.3337C14.07 14.6667 14.667 14.0697 14.667 13.3333V4C14.667 3.26362 14.07 2.66667 13.3337 2.66667Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10.6663 1.33333V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5.33366 1.33333V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1.33366 6.66667H14.667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4.66699 9.33333H6.00033" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4.66699 12H7.33366" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9.33366 9.33333H11.3337" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9.33366 12H11.3337" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span>Мои мероприятия</span>
           </button>
           
           <button onClick={() => {

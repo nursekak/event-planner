@@ -75,12 +75,30 @@ const Chat = ({ currentUser, onClose }) => {
       const response = await api.post('/api/messages/create-chat', {
         userId: selectedUser.id
       });
-      setConversations([...conversations, response.data]);
-      setSelectedConversation(response.data);
-      setIsCreatingChat(false);
-      setSelectedUser(null);
+      
+      // Проверяем, что ответ содержит данные и ID новой беседы
+      if (response.data && response.data.id) {
+        const newConversation = response.data;
+        setConversations(prevConversations => {
+          // Проверяем, нет ли уже такой беседы в списке
+          if (!prevConversations.some(conv => conv.id === newConversation.id)) {
+            return [...prevConversations, newConversation];
+          }
+          return prevConversations;
+        });
+        setSelectedConversation(newConversation); // Сразу переключаемся на новую беседу
+        setIsCreatingChat(false); // Закрываем режим создания
+        setSelectedUser(null); // Сбрасываем выбор пользователя
+        setSearchQuery(''); // Очищаем поиск пользователей
+        alert('Беседа успешно создана!'); // Уведомление для пользователя
+      } else {
+        console.error('Failed to create chat: Invalid response data', response);
+        alert('Не удалось создать беседу: неверные данные ответа.');
+      }
     } catch (error) {
       console.error('Error creating chat:', error);
+      // Добавляем вывод сообщения об ошибке для пользователя
+      alert(`Ошибка при создании беседы: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -96,13 +114,16 @@ const Chat = ({ currentUser, onClose }) => {
     try {
       const response = await api.post('/api/messages/send', {
         content: newMessage,
-        receiverId: selectedConversation.id
+        receiverId: selectedConversation.id,
+        senderId: currentUser.id
       });
       setMessages([...messages, response.data]);
       setNewMessage('');
       setIsEmojiPickerOpen(false);
     } catch (error) {
       console.error('Error sending message:', error);
+      // Добавляем alert для отображения ошибки пользователю
+      alert(`Ошибка при отправке сообщения: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -269,38 +290,30 @@ const Chat = ({ currentUser, onClose }) => {
                 </div>
               </div>
               <div className="messages-container">
-                {filteredMessages.map(message => (
-                  <div
-                    key={message.id}
-                    className={`message ${message.senderId === currentUser.id ? 'sent' : 'received'}`}
-                  >
-                    <div className="message-content">
-                      {message.type === 'file' ? (
-                        <div className="file-message">
-                          <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
-                            📎 {message.fileName}
-                          </a>
-                        </div>
-                      ) : (
-                        message.content
-                      )}
-                      <div className="message-actions">
-                        <button
-                          className="delete-message"
-                          onClick={() => handleDeleteMessage(message.id)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                    <div className="message-time">
-                      {new Date(message.createdAt).toLocaleTimeString()}
-                    </div>
+                {filteredMessages.length === 0 ? (
+                  <div className="no-messages">
+                    <p>Нет сообщений в этой беседе.</p>
                   </div>
-                ))}
+                ) : (
+                  filteredMessages.map(msg => {
+                    const isSent = msg.senderId === currentUser.id;
+                    return (
+                      <div 
+                        key={msg.id} 
+                        className={`message ${isSent ? 'sent' : 'received'}`}
+                        onDoubleClick={() => handleDeleteMessage(msg.id)}
+                      >
+                        {msg.content}
+                        <div className="message-meta">
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
                 <div ref={messagesEndRef} />
               </div>
-              <form onSubmit={handleSendMessage} className="message-input">
+              <form className="message-input" onSubmit={handleSendMessage}>
                 <div className="input-actions">
                   <button
                     type="button"
@@ -325,10 +338,9 @@ const Chat = ({ currentUser, onClose }) => {
                 </div>
                 <input
                   type="text"
+                  placeholder="Напишите сообщение..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Введите сообщение..."
-                  disabled={isFileUploading}
                 />
                 {isFileUploading && (
                   <div className="upload-progress">
@@ -339,8 +351,8 @@ const Chat = ({ currentUser, onClose }) => {
                     <span>{Math.round(uploadProgress)}%</span>
                   </div>
                 )}
-                <button type="submit" disabled={isFileUploading}>
-                  Отправить
+                <button type="submit" className="send-button" disabled={!newMessage.trim() && !isFileUploading}>
+                  ➤
                 </button>
               </form>
             </>
